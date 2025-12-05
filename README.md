@@ -4,80 +4,44 @@
 Este proyecto implementa un flujo completo de integración y despliegue continuo (CI/CD) utilizando GitHub Actions, Docker, Terraform, herramientas de seguridad, y monitoreo con Prometheus + Grafana. La aplicación consiste en una API Node.js simple con métricas internas para observabilidad.
 
 ## 📁 Estructura del Proyecto
-
+```
 Proyecto1_Grupo15/
-
-│
 ├── src/
-
-│   ├── app.js
-
-│   ├── index.js
-
-│   ├── db.js
-
-│   ├── controllers/
-
-│   │   └── tasksController.js
-
-│   ├── routes/
-
-│   │   └── tasks.js
-
-│   ├── metrics/
-
-│   │   └── metrics.js
-
-│   └── utils/
-
-│       └── logger.js
-
+│ ├── app.js
+│ ├── index.js
+│ ├── db.js
+│ ├── controllers/
+│ │ └── tasksController.js
+│ ├── routes/
+│ │ └── tasks.js
+│ ├── metrics/
+│ │ └── metrics.js
+│ └── utils/
+│ └── logger.js
 │
-
 ├── tests/
-
-│   └── tasks.test.js
-
+│ └── tasks.test.js
 │
-
 ├── terraform/
-
-│   ├── main.tf
-
-│   ├── variables.tf
-
-│   ├── outputs.tf
-
-│   └── provider.tf
-
+│ ├── main.tf
+│ ├── variables.tf
+│ ├── outputs.tf
+│ └── provider.tf
 │
-
 ├── .github/
-
-│   └── workflows/
-
-│       └── ci-cd.yml
-
+│ └── workflows/
+│ └── ci-cd.yml
 │
-
 ├── .dockerignore
-
 ├── .gitignore
-
 ├── Dockerfile
-
 ├── docker-compose.yml
-
 ├── package.json
-
 ├── package-lock.json
-
-├── sbom.json              # generado automáticamente en CI
-
+├── sbom.json
 ├── README.md
-
 └── LICENSE
-
+```
 ## 🚀 Objetivo
 
 Construir un pipeline que:
@@ -89,7 +53,9 @@ Construir un pipeline que:
 - Despliegue infraestructura con Terraform (local o AWS).
 - Exponga métricas para monitoreo con Prometheus.
 
+
 ## 🛠️ Tecnologías Utilizadas
+
 
 | Área           | Herramienta                          |
 |----------------|--------------------------------------|
@@ -101,4 +67,4 @@ Construir un pipeline que:
 | Lenguaje       | Node.js                              |
 
 
-Alumnos
+Alumnos:
