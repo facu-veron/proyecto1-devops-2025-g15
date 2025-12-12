@@ -1,5 +1,9 @@
 name: CI/CD - Proyecto 1 Grupo 15
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     branches: [ main ]
