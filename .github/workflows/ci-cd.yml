@@ -50,7 +50,7 @@ jobs:
       # SBOM (CycloneDX)
       # ---------------------------
       - name: Generar SBOM (CycloneDX)
-        run: npx @cyclonedx/bom -o sbom.json
+        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json
 
       - name: Subir SBOM como artefacto
         uses: actions/upload-artifact@v4
