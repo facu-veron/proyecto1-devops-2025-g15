@@ -69,7 +69,7 @@ jobs:
         run: npm audit --audit-level=high || true
 
   # -------------------------------------------------------------------
-  # CD – Build y Deploy
+  # CD – Build y Deploy en AWS (ECR + ECS/Fargate via Terraform)
   # -------------------------------------------------------------------
   cd:
     name: Despliegue
@@ -81,44 +81,79 @@ jobs:
         uses: actions/checkout@v4
 
       # ---------------------------
-      # LOGIN A GHCR (REGISTRO DE IMÁGENES)
+      # CONFIGURAR CREDENCIALES AWS
       # ---------------------------
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # ---------------------------
+      # VARIABLES DE IMAGEN / ECR
+      # ---------------------------
+      - name: Set image variables
+        id: vars
+        run: |
+          echo "REPOSITORY=proyecto1-todo-api" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=latest" >> $GITHUB_OUTPUT
+
+      # ---------------------------
+      # LOGIN A ECR
+      # ---------------------------
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+            | docker login \
+              --username AWS \
+              --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      # ---------------------------
+      # CREAR REPO ECR SI NO EXISTE
+      # ---------------------------
+      - name: Create ECR repo if not exists
+        run: |
+          aws ecr describe-repositories \
+            --repository-names ${{ steps.vars.outputs.REPOSITORY }} \
+            || aws ecr create-repository --repository-name ${{ steps.vars.outputs.REPOSITORY }}
 
       # ---------------------------
       # BUILD IMAGEN DOCKER
       # ---------------------------
       - name: Build Docker Image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest .
+          docker build -t ${{ steps.vars.outputs.REPOSITORY }}:latest .
 
       # ---------------------------
-      # PUSH IMAGEN DOCKER
+      # TAG + PUSH A ECR
       # ---------------------------
-      - name: Push Docker Image
+      - name: Tag and Push Image to ECR
         run: |
-          docker push ghcr.io/${{ github.repository }}:latest
-          
+          ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.vars.outputs.REPOSITORY }}
+          docker tag ${{ steps.vars.outputs.REPOSITORY }}:latest $ECR_URI:${{ steps.vars.outputs.IMAGE_TAG }}
+          docker push $ECR_URI:${{ steps.vars.outputs.IMAGE_TAG }}
+          echo "IMAGE_URI=$ECR_URI:${{ steps.vars.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
+
       # ---------------------------
       # INSTALAR TERRAFORM
       # ---------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.8.5    
-          
+          terraform_version: 1.8.5
+
       # ---------------------------
-      # DEPLOY CON TERRAFORM
+      # DEPLOY CON TERRAFORM EN AWS
       # ---------------------------
       - name: Terraform Init
+        env:
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
         run: terraform -chdir=terraform init
 
       - name: Terraform Apply
         env:
-          TF_VAR_image: ghcr.io/${{ github.repository }}:latest
+          TF_VAR_image: ${{ env.IMAGE_URI }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
         run: terraform -chdir=terraform apply -auto-approve
+  
