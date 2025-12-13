@@ -5,12 +5,8 @@ permissions:
   packages: write
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
-  
+ 
 jobs:
   ci:
     name: Integración Continua
