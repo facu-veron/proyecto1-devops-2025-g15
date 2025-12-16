@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    # Ejecutar cada día a las 2 AM
     - cron: '0 2 * * *'
 
 jobs:
@@ -18,9 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # ============================================
-      # PASO 1: Hadolint - Validar Dockerfile
-      # ============================================
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -28,9 +24,6 @@ jobs:
           config: .hadolint.yaml
           failure-threshold: warning
 
-      # ============================================
-      # PASO 2: npm audit - Escanear dependencias
-      # ============================================
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -47,14 +40,11 @@ jobs:
         continue-on-error: true
 
       - name: Upload npm audit report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: npm-audit-report
           path: npm-audit-report.json
 
-      # ============================================
-      # PASO 3: Build Docker Image
-      # ============================================
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -68,9 +58,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ============================================
-      # PASO 4: Trivy - Escanear imagen
-      # ============================================
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -92,14 +79,11 @@ jobs:
           output: 'trivy-report.json'
 
       - name: Upload Trivy full report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.json
 
-      # ============================================
-      # PASO 5: Verificar vulnerabilidades CRITICAL
-      # ============================================
       - name: Check for CRITICAL vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
@@ -108,21 +92,15 @@ jobs:
           severity: 'CRITICAL'
           format: 'table'
 
-      # ============================================
-      # PASO 6: Generar SBOM
-      # ============================================
       - name: Generate SBOM
         run: npm run sbom
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
 
-      # ============================================
-      # PASO 7: Resumen de Seguridad
-      # ============================================
       - name: Security Summary
         if: always()
         run: |
@@ -140,9 +118,6 @@ jobs:
           echo "### SBOM Generated" >> $GITHUB_STEP_SUMMARY
           echo "📋 Software Bill of Materials available in artifacts" >> $GITHUB_STEP_SUMMARY
 
-  # ============================================
-  # JOB OPCIONAL: SonarQube Analysis
-  # ============================================
   sonarqube:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
@@ -152,7 +127,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for better analysis
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
