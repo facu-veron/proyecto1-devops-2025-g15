@@ -239,3 +239,30 @@ jobs:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
         run: terraform -chdir=terraform apply -auto-approve
   
+# --------------------------------------------------------------
+# Observaciones y posibles mejoras (NO aplicadas)
+
+# npm audit || true
+# Línea: Security Audit
+# Observación: el pipeline no falla aunque haya vulnerabilidades HIGH
+
+# Mejora sugerida (opcional):
+# npm audit --audit-level=high
+# (sin || true para entornos productivos)
+# --------------------------------------------
+# Uso de latest como tag
+# Línea: IMAGE_TAG=latest
+# Riesgo: dificulta trazabilidad y rollback
+
+# Alternativa recomendada:
+# Usar $ {{ github.sha }} o número de build
+
+# --------------------------------------------
+# Terraform Apply automático
+
+# Línea: terraform apply -auto-approve
+# Riesgo: despliegue sin aprobación humana
+
+# Alternativa:
+# Separar plan y apply
+# Requerir aprobación manual en producción
