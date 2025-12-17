@@ -1,11 +1,86 @@
-apiVersion: 1
+# ============================================================
+# GRAFANA DATASOURCE PROVISIONING - PROMETHEUS
+# ------------------------------------------------------------
+# Este archivo define la configuración de provisioning de
+# una fuente de datos (datasource) en Grafana.
+#
+# Su función es registrar automáticamente a Prometheus como
+# datasource dentro de Grafana al iniciar el servicio,
+# evitando configuraciones manuales desde la interfaz web.
+#
+# Esto permite:
+# - Versionar la configuración como código
+# - Automatizar entornos (Dev / QA / Prod)
+# - Garantizar consistencia entre despliegues
+# ============================================================
 
+# ------------------------------------------------------------
+# Versión de la API de provisioning de Grafana
+# ------------------------------------------------------------
+apiVersion: 1
+# ------------------------------------------------------------
+# Definición de datasources
+# Grafana puede tener múltiples datasources configurados.
+# ------------------------------------------------------------
 datasources:
+    # Nombre lógico del datasource dentro de Grafana
   - name: Prometheus
+    # Tipo de datasource: Prometheus (motor de métricas)
     type: prometheus
+    # Grafana actúa como proxy entre el navegador y Prometheus.
+    # Evita problemas de CORS y mejora la seguridad.
     access: proxy
+    # URL del servicio Prometheus.
+    # "prometheus" corresponde al nombre del servicio Docker
+    # definido en docker-compose.yml.
     url: http://prometheus:9090
+    # Define a Prometheus como el datasource por defecto,
+    # utilizado automáticamente por los dashboards.
     isDefault: true
+    # Permite modificar el datasource desde la UI de Grafana.
+    # Útil en entornos de desarrollo.
     editable: true
+      # ------------------------------------------------------
+      # Configuración específica de Prometheus
+      # ------------------------------------------------------
     jsonData:
+      # Intervalo mínimo de consulta.
+      # Define cada cuánto Grafana espera nuevos datos
+      # y optimiza la resolución de métricas.
       timeInterval: 15s
+
+# --------------------------------------------------------------
+# Observaciones y mejoras sugeridas (NO aplicadas)
+
+# Nombre del archivo (prometheus.yml)
+
+# Puede generar confusión con:
+# prometheus.yml de Prometheus (scrape config)
+# Recomendación:
+  # grafana-datasource-prometheus.yml
+
+# --------------------------------------------
+# editable: true
+
+# Riesgo: cambios manuales no versionados
+# Recomendación:
+  # Producción: false
+  # Mantener Infraestructura y Observabilidad como Código
+
+# --------------------------------------------
+# timeInterval: 15s
+
+# Correcto para monitoreo near-real-time
+# Puede ser elevado para:
+# Sistemas con baja frecuencia de scrape
+# Ajustable según costo / volumen
+
+# --------------------------------------------
+# Dependencia implícita
+
+# Requiere:
+  # Servicio prometheus activo
+  # Puerto 9090 expuesto internamente
+# Conviene documentarlo en docker-compose.yml
+
+# --------------------------------------------------------------
