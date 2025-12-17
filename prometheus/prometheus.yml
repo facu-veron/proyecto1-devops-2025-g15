@@ -1,33 +1,149 @@
+# ============================================================
+# CONFIGURACIÓN PRINCIPAL DE PROMETHEUS
+# ------------------------------------------------------------
+# Este archivo define:
+# - Intervalos globales de scraping y evaluación
+# - Conexión con Alertmanager
+# - Carga de reglas de alertas
+# - Targets (endpoints) desde donde se recolectan métricas
+#
+# Prometheus funciona bajo un modelo "pull":
+# consulta periódicamente los endpoints /metrics definidos.
+# ============================================================
+
 global:
+  # ----------------------------------------------------------
+  # Intervalo global de recolección de métricas
+  # ----------------------------------------------------------
+  # Define cada cuánto Prometheus hace scraping a los targets,
+  # salvo que un job lo sobrescriba explícitamente.
   scrape_interval: 15s
+  # ----------------------------------------------------------
+  # Intervalo global de evaluación de reglas
+  # ----------------------------------------------------------
+  # Define cada cuánto Prometheus evalúa reglas de grabación
+  # y reglas de alertas.
   evaluation_interval: 15s
+  # ----------------------------------------------------------
+  # Etiquetas externas
+  # ----------------------------------------------------------
+  # Se agregan automáticamente a TODAS las métricas.
+  # Son muy útiles en entornos multi-cluster o multi-entorno.
   external_labels:
     cluster: 'todo-api-cluster'
     environment: 'development'
 
+# ============================================================
+# CONFIGURACIÓN DE ALERTMANAGER
+# ------------------------------------------------------------
+# Define a dónde Prometheus envía las alertas cuando se disparan.
+# Prometheus NO notifica directamente.
+# ============================================================
 # Alertmanager configuration
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
+            # Dirección del servicio Alertmanager
             - alertmanager:9093
 
 # Load rules once and periodically evaluate them
+
+# ============================================================
+# ARCHIVOS DE REGLAS
+# ------------------------------------------------------------
+# Prometheus carga estas reglas al iniciar y las evalúa
+# periódicamente según evaluation_interval.
+# ============================================================
 rule_files:
   - /etc/prometheus/alerts.yml
 
+# ============================================================
+# CONFIGURACIÓN DE SCRAPING (TARGETS)
+# ------------------------------------------------------------
+# Cada job define:
+# - Qué servicio se monitorea
+# - Dónde expone métricas
+# - Cada cuánto se scrapea
+# ============================================================
 scrape_configs:
+  # ----------------------------------------------------------
+  # JOB: TODO API
+  # ----------------------------------------------------------
+  # Recolecta métricas de la aplicación Node.js.
+  # Estas métricas incluyen:
+  # - Requests HTTP
+  # - Latencias
+  # - Errores
+  # - Métricas de negocio
+  # ----------------------------------------------------------
   - job_name: 'todo-api'
     static_configs:
+          # Servicio Docker donde corre la API
       - targets: ['app:3000']
+    # Endpoint donde la app expone métricas Prometheus
     metrics_path: /metrics
+    # Intervalo específico para este job
     scrape_interval: 10s
+    # Timeout máximo para cada scrape
     scrape_timeout: 5s
 
+  # ----------------------------------------------------------
+  # JOB: PROMETHEUS
+  # ----------------------------------------------------------
+  # Permite que Prometheus se monitoree a sí mismo.
+  # Muy útil para debugging y dashboards internos.
+  # ----------------------------------------------------------
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
+  # ----------------------------------------------------------
+  # JOB: ALERTMANAGER
+  # ----------------------------------------------------------
+  # Permite monitorear la salud de Alertmanager
+  # y saber si está disponible para recibir alertas.
+  # ----------------------------------------------------------
   - job_name: 'alertmanager'
     static_configs:
       - targets: ['alertmanager:9093']
+
+# --------------------------------------------------------------
+Observaciones técnicas (NO aplicadas)
+
+# Uso correcto de external_labels
+# Excelente práctica
+# Fundamental si mañana agregan:
+#  - Otro entorno (staging, prod)
+#  - Otro cluster
+
+# --------------------------------------------
+# scrape_timeout bien definido
+
+# Menor que scrape_interval
+# Evita bloqueos de scraping
+
+# --------------------------------------------
+# Targets vía DNS Docker
+
+# app, alertmanager funcionan solo:
+#   - Dentro de la misma network Docker
+#   - Correcto para docker-compose
+
+# --------------------------------------------
+# Sin relabel_configs
+
+# Totalmente válido
+# En producción se usarían para:
+#   - Normalizar labels
+#   - Filtrar targets
+#   - Multi-tenant
+
+# --------------------------------------------
+# No hay recording rules
+#   No es un error
+#   Podrían agregarse para optimizar queries costosas
+
+
+
+# --------------------------------------------------------------
