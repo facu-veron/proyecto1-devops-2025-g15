@@ -1,76 +1,172 @@
+# ------------------------------------------------------------------------------
+# ARCHIVO: docker-compose.yml
+#
+# PROPÓSITO
+# ----------
+# Este archivo define un entorno completo de ejecución LOCAL basado en Docker
+# Compose que integra:
+#
+# - La aplicación Node.js (TODO API)
+# - Prometheus para recolección de métricas
+# - Alertmanager para gestión de alertas
+# - Grafana para visualización
+# - SonarQube para análisis de calidad de código
+#
+# El objetivo es simular un stack DevOps / DevSecOps real,
+# permitiendo observabilidad, alertas y análisis sin depender de la nube.
+# ------------------------------------------------------------------------------
 services:
+  # ---------------------------------------------------------------------------
+  # SERVICIO: APLICACIÓN TODO API
+  #
+  # Contenedor principal de la aplicación Node.js.
+  # Expone métricas en /metrics y endpoints REST para gestión de tareas.
+  # ---------------------------------------------------------------------------
   app:
+    # Construye la imagen Docker usando el Dockerfile del proyecto
     build: .
+    # Publica el puerto 3000 del contenedor en el host
+    # Permite acceder a la API desde el navegador o herramientas externas
     ports:
       - "3000:3000"
+    # Volumen persistente para almacenar la base de datos SQLite
+    # Evita la pérdida de datos al reiniciar el contenedor
     volumes:
       - todo_data:/app/data
+    # Variables de entorno para configurar el runtime de Node.js
     environment:
       - NODE_ENV=development
+    # Conecta el contenedor a la red compartida de monitoreo
     networks:
       - monitoring
 
+  # ---------------------------------------------------------------------------
+  # SERVICIO: PROMETHEUS
+  #
+  # Sistema de monitoreo que:
+  # - Scrapea métricas desde la aplicación
+  # - Evalúa reglas de alerta
+  # - Almacena series temporales
+  # ---------------------------------------------------------------------------
   prometheus:
     image: prom/prometheus:latest
+
+    # Monta archivos de configuración y reglas de alertas en modo solo lectura
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
+    # Argumentos de ejecución de Prometheus
+    # Define:
+    # - Archivo de configuración
+    # - Ruta de almacenamiento
+    # - Consolas web internas
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+    # Expone la interfaz web de Prometheus
     ports:
       - "9090:9090"
+    # Red compartida con el resto del stack
     networks:
       - monitoring
+    # Define dependencias de arranque
+    # Garantiza que la app y alertmanager estén levantados primero
     depends_on:
       - app
       - alertmanager
 
+
+  # ---------------------------------------------------------------------------
+  # SERVICIO: GRAFANA
+  #
+  # Plataforma de visualización para métricas y dashboards.
+  # Se integra automáticamente con Prometheus como datasource.
+  # ---------------------------------------------------------------------------
   grafana:
     image: grafana/grafana-oss:latest
+    # Publica la UI web de Grafana
     ports:
       - "3001:3000"
+    # Volúmenes:
+    # - Dashboards versionados
+    # - Provisioning automático de datasources
+    # - Datos persistentes de Grafana
     volumes:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - ./grafana/provisioning:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
+    # Configuración básica de seguridad
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+    # Red compartida
     networks:
       - monitoring
+    # Espera a que Prometheus esté disponible
     depends_on:
       - prometheus
 
+  # ---------------------------------------------------------------------------
+  # SERVICIO: ALERTMANAGER
+  #
+  # Componente encargado de:
+  # - Recibir alertas desde Prometheus
+  # - Agruparlas
+  # - Aplicar reglas de inhibición
+  # - Enviarlas a distintos receptores (webhook, email, Slack, etc.)
+  # ---------------------------------------------------------------------------
   alertmanager:
     image: prom/alertmanager:latest
+    # Expone la UI web de Alertmanager
     ports:
       - "9093:9093"
+    # Monta la configuración de alertas y almacenamiento persistente
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
+    # Argumentos de ejecución
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
+    # Red compartida
     networks:
       - monitoring
 
+  # ---------------------------------------------------------------------------
+  # SERVICIO: SONARQUBE
+  #
+  # Plataforma de análisis estático de código.
+  # Evalúa:
+  # - Bugs
+  # - Vulnerabilidades
+  # - Code smells
+  # - Cobertura de tests
+  # ---------------------------------------------------------------------------
   sonarqube:
     image: sonarqube:community
+    # Expone la interfaz web de SonarQube
     ports:
       - "9000:9000"
+    # Desactiva checks de bootstrap para entornos no productivos
     environment:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    # Volúmenes persistentes para datos, extensiones y logs
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
+    # Red compartida
     networks:
       - monitoring
 
+# ---------------------------------------------------------------------------
+# DEFINICIÓN DE VOLÚMENES
+#
+# Permiten persistir datos fuera del ciclo de vida de los contenedores.
+# ---------------------------------------------------------------------------
 volumes:
   todo_data:
   prometheus_data:
@@ -80,6 +176,119 @@ volumes:
   sonarqube_extensions:
   sonarqube_logs:
 
+# ---------------------------------------------------------------------------
+# DEFINICIÓN DE REDES
+#
+# Red bridge interna que permite comunicación entre contenedores
+# sin exponer servicios innecesarios al host.
+# ---------------------------------------------------------------------------
 networks:
   monitoring:
     driver: bridge
+
+
+# --------------------------------------------------------------
+#
+# Observaciones técnicas (NO aplicadas)
+#
+# --------------------------------------------
+# Uso de imágenes :latest
+#
+#   Se utilizan imágenes con tag :latest en:
+#   - prom/prometheus
+#   - grafana/grafana-oss
+#   - prom/alertmanager
+#   - sonarqube
+#
+#   Esto es correcto para entornos de demo o laboratorio,
+#   pero en producción se recomienda:
+#   - Fijar versiones específicas (ej: prom/prometheus:v2.52.0)
+#   - Evitar cambios inesperados al hacer pull
+#
+# --------------------------------------------
+# Servicio APP sin healthcheck
+#
+#   El servicio "app" no define un healthcheck Docker.
+#   Esto implica que:
+#   - Docker Compose no puede detectar fallos de la app
+#   - depends_on no valida estado real de salud
+#
+#   En producción se recomienda:
+#   - Definir un endpoint /health
+#   - Agregar healthcheck HTTP
+#
+# --------------------------------------------
+# Exposición de puertos en todos los servicios
+#
+#   Se exponen puertos al host para:
+#   - Prometheus
+#   - Grafana
+#   - Alertmanager
+#   - SonarQube
+#
+#   Esto es ideal para aprendizaje y debugging,
+#   pero en producción:
+#   - Se limitaría el acceso mediante proxy o VPN
+#   - Algunos servicios no deberían exponerse públicamente
+#
+# --------------------------------------------
+# Contraseñas hardcodeadas
+#
+#   La contraseña de Grafana (admin/admin) está definida
+#   directamente en el archivo.
+#
+#   Correcto para demo académica.
+#   En producción:
+#   - Usar variables de entorno externas
+#   - Docker secrets o Vault
+#
+# --------------------------------------------
+# Falta de TLS / HTTPS
+#
+#   Todos los servicios funcionan en HTTP plano.
+#
+#   En producción:
+#   - Usar reverse proxy (Nginx / Traefik)
+#   - Certificados TLS (Let's Encrypt)
+#
+# --------------------------------------------
+# Dependencias de arranque no garantizan disponibilidad
+#
+#   depends_on asegura orden de inicio,
+#   pero no garantiza que el servicio esté listo.
+#
+#   Para producción:
+#   - Usar healthchecks
+#   - O herramientas de espera (wait-for-it, retries)
+#
+# --------------------------------------------
+# Red única para todos los servicios
+#
+#   Todos los servicios comparten la red "monitoring".
+#
+#   Esto simplifica el diseño,
+#   pero en producción:
+#   - Separar redes (app, monitoring, admin)
+#   - Reducir superficie de ataque
+#
+# --------------------------------------------
+# Sin límites de recursos
+#
+#   No se definen:
+#   - memory limits
+#   - cpu limits
+#
+#   En producción:
+#   - Definir recursos por contenedor
+#   - Evitar que un servicio degrade al resto
+#
+# --------------------------------------------
+# Persistencia local
+#
+#   Los volúmenes están definidos localmente.
+#
+#   Correcto para entorno local.
+#   En producción:
+#   - Usar storage externo (EFS, S3, etc.)
+#
+# --------------------------------------------------------------

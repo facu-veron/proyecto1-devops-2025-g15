@@ -1,24 +1,55 @@
-#!/usr/bin/env pwsh
+# --------------------------------------------------------------
+# Script: interpret-security-reports.ps1
+#
+# Propósito:
+#   Interpretar los reportes de seguridad generados por el
+#   pipeline (Trivy, npm audit y Hadolint) y producir un
+#   resumen ejecutivo legible para humanos.
+#
+# Objetivo:
+#   - Traducir resultados técnicos a conclusiones accionables
+#   - Facilitar la toma de decisiones (deploy / no deploy)
+#   - Priorizar correcciones de seguridad
+#
+# Público objetivo:
+#   - Estudiantes
+#   - Desarrolladores
+#   - Equipos DevOps / DevSecOps
 # Script para interpretar reportes de vulnerabilidades
 # Este script analiza los reportes generados y proporciona un resumen ejecutivo
+#!/usr/bin/env pwsh
+# --------------------------------------------------------------
 
 param(
+    # Directorio donde se encuentran los reportes generados
+    # por el pipeline de seguridad
     [string]$ReportDir = "security-reports"
 )
-
+# Encabezado visual del script
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "INTERPRETACIÓN DE REPORTES DE SEGURIDAD" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
-
+# --------------------------------------------------------------
+# Validación inicial
+#
+# Se verifica que el directorio de reportes exista antes
+# de intentar procesar archivos JSON o TXT.
+# --------------------------------------------------------------
 if (-not (Test-Path $ReportDir)) {
     Write-Host "[ERROR] El directorio de reportes no existe: $ReportDir" -ForegroundColor Red
     Write-Host "[INFO] Ejecuta primero: ./security-pipeline.ps1" -ForegroundColor Yellow
     exit 1
 }
 
+
 # ===================================================================
 # ANÁLISIS DE REPORTE TRIVY
+#
+# Trivy detecta vulnerabilidades en:
+#   - Imagen Docker
+#   - Paquetes del sistema operativo
+#   - Librerías incluidas
 # ===================================================================
 Write-Host "======================================" -ForegroundColor Yellow
 Write-Host "ANÁLISIS DE VULNERABILIDADES (TRIVY)" -ForegroundColor Yellow
@@ -26,9 +57,10 @@ Write-Host "======================================" -ForegroundColor Yellow
 
 $trivyJsonPath = Join-Path $ReportDir "trivy-report.json"
 if (Test-Path $trivyJsonPath) {
+    # Cargar el reporte JSON de Trivy
     $trivyReport = Get-Content $trivyJsonPath | ConvertFrom-Json
     
-    # Contar vulnerabilidades por severidad
+    # Inicializar contador de vulnerabilidades por severidad
     $vulnCount = @{
         CRITICAL = 0
         HIGH = 0
@@ -36,7 +68,8 @@ if (Test-Path $trivyJsonPath) {
         LOW = 0
         UNKNOWN = 0
     }
-    
+
+    # Recorrer resultados y acumular severidades
     foreach ($result in $trivyReport.Results) {
         if ($result.Vulnerabilities) {
             foreach ($vuln in $result.Vulnerabilities) {
@@ -44,7 +77,8 @@ if (Test-Path $trivyJsonPath) {
             }
         }
     }
-    
+
+    # Mostrar resumen visual
     Write-Host ""
     Write-Host "Resumen de Vulnerabilidades:" -ForegroundColor White
     Write-Host "  CRITICAL: $($vulnCount.CRITICAL)" -ForegroundColor $(if($vulnCount.CRITICAL -gt 0){"Red"}else{"Green"})
@@ -52,7 +86,8 @@ if (Test-Path $trivyJsonPath) {
     Write-Host "  MEDIUM:   $($vulnCount.MEDIUM)" -ForegroundColor $(if($vulnCount.MEDIUM -gt 0){"Yellow"}else{"Green"})
     Write-Host "  LOW:      $($vulnCount.LOW)" -ForegroundColor $(if($vulnCount.LOW -gt 0){"Yellow"}else{"Green"})
     Write-Host "  UNKNOWN:  $($vulnCount.UNKNOWN)" -ForegroundColor Gray
-    
+
+    # Interpretación ejecutiva
     Write-Host ""
     Write-Host "Interpretación:" -ForegroundColor Cyan
     if ($vulnCount.CRITICAL -gt 0) {
@@ -65,7 +100,11 @@ if (Test-Path $trivyJsonPath) {
         Write-Host "  [✓] Estado aceptable para desarrollo" -ForegroundColor Green
     }
     
+    # --------------------------------------------------------------
     # Top 5 vulnerabilidades más críticas
+    #
+    # Ayuda a enfocar el esfuerzo de mitigación
+    # --------------------------------------------------------------
     Write-Host ""
     Write-Host "Top 5 Vulnerabilidades Críticas/High:" -ForegroundColor White
     $topVulns = @()
@@ -100,6 +139,8 @@ if (Test-Path $trivyJsonPath) {
 
 # ===================================================================
 # ANÁLISIS DE NPM AUDIT
+#
+# Evalúa vulnerabilidades en dependencias JavaScript
 # ===================================================================
 Write-Host ""
 Write-Host "======================================" -ForegroundColor Yellow
@@ -135,6 +176,8 @@ if (Test-Path $npmAuditPath) {
 
 # ===================================================================
 # ANÁLISIS DE HADOLINT
+#
+# Evalúa buenas prácticas del Dockerfile
 # ===================================================================
 Write-Host ""
 Write-Host "======================================" -ForegroundColor Yellow
@@ -168,6 +211,8 @@ if (Test-Path $hadolintPath) {
 
 # ===================================================================
 # RECOMENDACIONES GENERALES
+#
+# Síntesis final orientada a la toma de decisiones
 # ===================================================================
 Write-Host ""
 Write-Host "======================================" -ForegroundColor Cyan
@@ -205,3 +250,58 @@ Write-Host ""
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "Fin del análisis" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
+
+
+# --------------------------------------------------------------
+#
+# Observaciones técnicas (NO aplicadas)
+#
+# --------------------------------------------
+# Interpretación basada en severidades
+#
+#   La lógica prioriza CRITICAL y HIGH
+#   Adecuado para entornos académicos
+#
+#   En producción:
+#   - Definir políticas por entorno
+#   - Ej: bloquear solo CRITICAL en dev
+#
+# --------------------------------------------
+# Análisis manual de CVEs
+#
+#   El script muestra Top 5 vulnerabilidades
+#   Facilita priorización humana
+#
+#   Mejora posible:
+#   - Exportar resumen en JSON o CSV
+#   - Integrar con Jira / Issues
+#
+# --------------------------------------------
+# Dependencia del formato de reportes
+#
+#   El script asume estructura estándar
+#   de Trivy y npm audit
+#
+#   Riesgo:
+#   - Cambios de versión podrían romper parsing
+#
+# --------------------------------------------
+# Uso interactivo
+#
+#   Output pensado para consola
+#   Ideal para ejecución local
+#
+#   En CI/CD:
+#   - Generar artefacto resumen
+#   - Publicar reporte HTML
+#
+# --------------------------------------------
+# Alcance del script
+#
+#   No corrige vulnerabilidades
+#   Solo interpreta resultados
+#
+#   Correcto según principio:
+#   "separación de responsabilidades"
+#
+# --------------------------------------------------------------
