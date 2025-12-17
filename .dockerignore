@@ -1,63 +1,175 @@
-# Dependencies
+# ------------------------------------------------------------------------------
+# ARCHIVO: .dockerignore
+#
+# PROPÓSITO
+# ----------
+# Este archivo define qué archivos y directorios deben EXCLUIRSE del contexto
+# de build de Docker cuando se ejecuta `docker build`.
+#
+# Docker, por defecto, envía TODO el contenido del directorio al motor de Docker.
+# El archivo .dockerignore actúa de forma similar a .gitignore, evitando que
+# archivos innecesarios, sensibles o peligrosos se copien dentro de la imagen.
+#
+# BENEFICIOS PRINCIPALES
+# ---------------------
+# 1. Seguridad:
+#    - Evita que secretos (.env), configuraciones internas, claves o archivos
+#      de infraestructura terminen dentro de la imagen.
+#    - Reduce la superficie de ataque de la imagen final.
+#
+# 2. Rendimiento:
+#    - Reduce el tamaño del contexto de build.
+#    - Acelera el proceso de construcción de la imagen.
+#    - Mejora el aprovechamiento del cache de capas de Docker.
+#
+# 3. Buenas prácticas DevOps / DevSecOps:
+#    - Separa claramente código de aplicación, infraestructura, monitoreo
+#      y documentación.
+#    - Mantiene la imagen enfocada únicamente en ejecutar la aplicación.
+#
+# IMPORTANTE
+# ----------
+# - Los archivos excluidos aquí NO estarán disponibles dentro del contenedor.
+# - Tests, documentación, infraestructura y configuraciones locales se ejecutan
+#   en el pipeline CI/CD, no dentro del runtime del contenedor.
+# ------------------------------------------------------------------------------
+
+
+############################################################
+# DEPENDENCIAS DE NODE.JS
+############################################################
+
+# node_modules contiene dependencias instaladas localmente.
+# No debe copiarse a la imagen porque:
+# - Depende del SO local (Windows/Mac/Linux)
+# - Docker debe instalar dependencias dentro del contenedor
+# - Aumenta innecesariamente el tamaño de la imagen
 node_modules/
+# Logs generados por npm/yarn durante errores
+# No aportan valor en runtime ni en build
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# package-lock.json se excluye en este proyecto
+# porque las dependencias se instalan explícitamente
+# dentro del pipeline / Dockerfile
 package-lock.json
 
-# Testing
+############################################################
+# ARCHIVOS DE TESTING
+############################################################
+
+# Reportes de cobertura de tests
+# Son artefactos locales y no deben viajar en la imagen
 coverage/
 .nyc_output/
+# Archivos de test unitarios
+# No se ejecutan dentro del contenedor en producción
+# (los tests corren en CI, no en runtime)
 *.test.js
 tests/
 
-# Environment
+############################################################
+# VARIABLES DE ENTORNO
+############################################################
+
+# Archivos con variables sensibles
+# Nunca deben incluirse en una imagen Docker
+# Las variables se inyectan en runtime (ECS, Docker, etc)
 .env
 .env.local
 .env.*.local
 
-# IDE
+############################################################
+# CONFIGURACIÓN DE IDEs Y EDITORES
+############################################################
+
+# Configuración local de Visual Studio Code
 .vscode/
+# Configuración local de IntelliJ / WebStorm
 .idea/
+# Archivos temporales de editores Unix
 *.swp
 *.swo
 *~
 
-# OS
+############################################################
+# ARCHIVOS DEL SISTEMA OPERATIVO
+############################################################
+
+# Archivos basura de macOS
 .DS_Store
+# Archivos basura de Windows
 Thumbs.db
 
-# Git
+############################################################
+# CONTROL DE VERSIONES
+############################################################
+
+# Repositorio Git completo
+# Docker no necesita historial de commits
 .git/
+# Archivos de configuración de Git
 .gitignore
 .gitattributes
 
-# CI/CD
+############################################################
+# CONFIGURACIÓN DE CI/CD
+############################################################
+
+# Workflows de GitHub Actions
+# El pipeline corre fuera del contenedor
 .github/
+# Configuración alternativa de CI
 .gitlab-ci.yml
 
-# Docker
+############################################################
+# ARCHIVOS DE DOCKER
+############################################################
+
+# El Dockerfile no debe copiarse dentro de la imagen
+# Solo se utiliza durante el build
 Dockerfile
 docker-compose*.yml
 .dockerignore
 
-# Documentation
+############################################################
+# DOCUMENTACIÓN
+############################################################
+
+# README y documentación no son necesarios en runtime
+# Mantiene la imagen más liviana
 README.md
 MONITORING.md
 *.md
 
-# Terraform
+############################################################
+# TERRAFORM
+############################################################
+
+# Infraestructura como código
+# No forma parte de la aplicación
 terraform/
 *.tf
 *.tfstate
 *.tfstate.backup
 .terraform/
 
-# Monitoring configs (already mounted as volumes)
+############################################################
+# CONFIGURACIONES DE MONITOREO
+############################################################
+
+# Prometheus y Grafana se levantan como servicios separados
+# Estas configs se montan por volumen, no por imagen
 prometheus/
 grafana/
 
-# Build artifacts
+############################################################
+# ARTEFACTOS DE BUILD
+############################################################
+
+# Builds previos (frontend / backend)
+# Docker debe generar su propio build limpio
 dist/
 build/
 sbom.json
