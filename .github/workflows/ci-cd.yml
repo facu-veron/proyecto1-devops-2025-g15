@@ -29,7 +29,7 @@ name: CI/CD - Proyecto 1 Grupo 15
 # packages: write  -> permite publicar artefactos (ej. imágenes)
 # ------------------------------------------------------------
 
-  permissions:
+permissions: #error de indentación corregido
   contents: read
   packages: write
 
