@@ -1,3 +1,36 @@
+# ------------------------------------------------------------------------------
+# ARCHIVO: .gitlab-ci.yml
+#
+# PROPÓSITO
+# ----------
+# Este archivo define un pipeline completo de CI/CD enfocado principalmente
+# en VALIDACIÓN, SEGURIDAD y ANÁLISIS de una aplicación contenerizada.
+#
+# El pipeline está diseñado para:
+# - Validar la calidad del Dockerfile
+# - Analizar dependencias Node.js
+# - Construir y publicar la imagen Docker
+# - Escanear vulnerabilidades con Trivy
+# - Integrar reportes de seguridad en GitLab
+# - Ejecutar análisis de calidad de código (SonarQube)
+# - Generar un resumen final de seguridad
+#
+# El enfoque es DevSecOps: la seguridad se integra desde las primeras etapas
+# del ciclo de vida del software.
+# ------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------
+# DEFINICIÓN DE ETAPAS DEL PIPELINE
+#
+# El pipeline se ejecuta de forma secuencial siguiendo este orden lógico:
+# 1. validate  → validaciones tempranas (Dockerfile, dependencias)
+# 2. build     → construcción de la imagen Docker
+# 3. security  → escaneos de seguridad (Trivy, SonarQube)
+# 4. report    → consolidación y visualización de resultados
+# ------------------------------------------------------------------------------
+
+
 # GitLab CI/CD Pipeline de Seguridad
 
 stages:
@@ -6,6 +39,15 @@ stages:
   - security
   - report
 
+
+# ------------------------------------------------------------------------------
+# VARIABLES GLOBALES DEL PIPELINE
+#
+# Estas variables se reutilizan en múltiples jobs para:
+# - Nombrar imágenes Docker
+# - Definir el tag basado en el commit
+# - Configurar Docker-in-Docker
+# ------------------------------------------------------------------------------
 variables:
   IMAGE_NAME: $CI_REGISTRY_IMAGE
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA
@@ -13,8 +55,14 @@ variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
 # ============================================
-# STAGE 1: Validación de Dockerfile
+# STAGE 1: VALIDACIÓN DE DOCKERFILE
 # ============================================
+# Este job ejecuta Hadolint para analizar el Dockerfile
+# y detectar malas prácticas, errores de seguridad o
+# problemas de mantenibilidad.
+#
+# Es una validación temprana que falla el pipeline si
+# se detectan problemas importantes.
 hadolint:
   stage: validate
   image: hadolint/hadolint:latest-alpine
@@ -26,8 +74,16 @@ hadolint:
     - merge_requests
 
 # ============================================
-# STAGE 2: npm audit
+# STAGE 2: ANÁLISIS DE DEPENDENCIAS (npm audit)
 # ============================================
+# Este job analiza las dependencias Node.js en busca
+# de vulnerabilidades conocidas utilizando npm audit.
+#
+# Se genera un reporte JSON que luego se usa en el
+# resumen de seguridad.
+#
+# allow_failure: true permite continuar el pipeline
+# aunque se detecten vulnerabilidades (enfoque informativo).
 npm-audit:
   stage: validate
   image: node:18-alpine
@@ -46,8 +102,13 @@ npm-audit:
     - merge_requests
 
 # ============================================
-# STAGE 3: Build Docker Image
+# STAGE 3: BUILD DE IMAGEN DOCKER
 # ============================================
+# Este job construye la imagen Docker de la aplicación
+# y la publica en el Container Registry de GitLab.
+#
+# Usa Docker-in-Docker (dind) para poder ejecutar
+# comandos docker dentro del job.
 build:
   stage: build
   image: docker:latest
@@ -63,8 +124,16 @@ build:
     - merge_requests
 
 # ============================================
-# STAGE 4: Trivy Security Scan
+# STAGE 4: ESCANEO DE SEGURIDAD CON TRIVY
 # ============================================
+# Este job analiza la imagen Docker construida
+# en busca de vulnerabilidades conocidas en:
+# - Sistema operativo base
+# - Librerías
+# - Dependencias
+#
+# El pipeline falla si se detectan vulnerabilidades
+# de severidad CRITICAL.
 trivy-scan:
   stage: security
   image: aquasec/trivy:latest
@@ -95,8 +164,13 @@ trivy-scan:
     - merge_requests
 
 # ============================================
-# STAGE 5: SonarQube (Opcional)
+# STAGE 5: ANÁLISIS DE CALIDAD DE CÓDIGO (SONARQUBE)
 # ============================================
+# Job opcional que ejecuta análisis estático de código
+# usando SonarQube / SonarCloud.
+#
+# allow_failure: true porque no bloquea el pipeline
+# ante problemas de calidad.
 sonarqube-check:
   stage: security
   image: 
@@ -119,8 +193,13 @@ sonarqube-check:
     - schedules
 
 # ============================================
-# STAGE 6: Security Report
+# STAGE 6: REPORTE CONSOLIDADO DE SEGURIDAD
 # ============================================
+# Este job genera un resumen legible en consola
+# combinando resultados de npm audit y Trivy.
+#
+# Su objetivo es facilitar la lectura rápida del
+# estado de seguridad del proyecto.
 security-report:
   stage: report
   image: alpine:latest
@@ -160,8 +239,11 @@ security-report:
     - merge_requests
 
 # ============================================
-# JOB SCHEDULED: Nightly Security Scan
+# JOB PROGRAMADO: ESCANEO NOCTURNO
 # ============================================
+# Job que se ejecuta mediante schedules para
+# escanear la imagen latest de forma periódica,
+# incluso sin nuevos commits.
 nightly-security:
   stage: security
   image: aquasec/trivy:latest
