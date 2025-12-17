@@ -1,13 +1,107 @@
+# ============================================================
+# GRAFANA DASHBOARD PROVISIONING
+# ------------------------------------------------------------
+# Este archivo define la configuración de "provisioning" de
+# dashboards en Grafana.
+#
+# Su objetivo es indicarle a Grafana:
+# - Dónde encontrar los archivos de dashboards (JSON)
+# - Cada cuánto tiempo revisar cambios
+# - Si los dashboards pueden modificarse desde la UI
+#
+# Este mecanismo permite versionar dashboards como código
+# y cargarlos automáticamente al iniciar Grafana.
+# ============================================================
+
+# ------------------------------------------------------------
+# Versión de la API de provisioning de Grafana
+# apiVersion: 1 es la versión estable utilizada para
+# dashboards, datasources y alertas.
+# ------------------------------------------------------------
 apiVersion: 1
 
+# ------------------------------------------------------------
+# Lista de providers de dashboards
+# Un provider define cómo y desde dónde se cargan dashboards.
+# ------------------------------------------------------------
 providers:
+    # Nombre lógico del provider dentro de Grafana.
+    # No tiene impacto funcional, solo organizativo.
   - name: 'Default'
+    # ID de la organización de Grafana.
+    # En instalaciones por defecto, la organización principal
+    # siempre tiene orgId = 1.
     orgId: 1
+    # Carpeta lógica dentro de Grafana donde se mostrarán
+    # los dashboards.
+    # Vacío ('') indica que se cargarán en la carpeta raíz.
     folder: ''
+    # Define el tipo de provisioning.
+    # "file" indica que los dashboards se cargan desde
+    # archivos en el sistema de archivos del contenedor.
     type: file
+    # Si está en false, Grafana permite eliminar dashboards
+    # provisionados cuando el archivo deja de existir.
+    # Si fuera true, Grafana impediría su eliminación.
     disableDeletion: false
+    # Intervalo (en segundos) en el que Grafana revisa
+    # cambios en los archivos de dashboards.
+    # Permite hot-reload sin reiniciar el contenedor.
     updateIntervalSeconds: 10
+    # Permite modificar dashboards desde la interfaz web.
+    # Si está en true:
+    # - Los cambios hechos en la UI no se sobrescriben
+    #   inmediatamente.
+    # - El archivo sigue siendo la fuente de verdad
+    #   en el próximo reload.
     allowUiUpdates: true
+      # ------------------------------------------------------
+      # Opciones específicas del provider
+      # ------------------------------------------------------
     options:
+      # Ruta dentro del contenedor donde Grafana buscará
+      # los archivos JSON de los dashboards.
+      # Normalmente este path se monta como volumen
+      # desde el host o desde el repositorio.
       path: /var/lib/grafana/dashboards
+      # Si está en true, Grafana creará carpetas automáticamente
+      # basándose en la estructura de directorios del filesystem.
+      # Esto permite organizar dashboards por carpetas
+      # sin configuración manual en la UI.
       foldersFromFilesStructure: true
+
+# --------------------------------------------------------------
+# Observaciones y mejoras sugeridas (NO aplicadas)
+
+# updateIntervalSeconds: 10
+# Ventaja: recarga casi inmediata de cambios
+# Desventaja: innecesario en producción
+# Recomendación:
+# Desarrollo: OK
+
+# Producción: 30–60 segundos
+
+# --------------------------------------------
+# allowUiUpdates: true
+# Riesgo: cambios manuales en la UI pueden perderse
+# Recomendación:
+# Producción: false
+
+# Mantener dashboards 100% como código
+
+# --------------------------------------------
+# folder: ''
+# Todos los dashboards se cargan en la raíz
+# Alternativa:
+# folder: 'DevOps'
+
+# para mayor orden visual
+
+# --------------------------------------------
+# Dependencia implícita
+# Este archivo requiere que:
+  # El volumen /var/lib/grafana/dashboards esté montado
+  # Existan dashboards en formato JSON
+# Sugerido documentarlo en docker-compose.yml
+
+# --------------------------------------------------------------
