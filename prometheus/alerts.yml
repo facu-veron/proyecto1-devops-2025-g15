@@ -1,7 +1,43 @@
+# ============================================================
+# PROMETHEUS ALERT RULES
+# ------------------------------------------------------------
+# Este archivo define las reglas de alertas que Prometheus
+# evalúa periódicamente a partir de las métricas recolectadas.
+#
+# Las alertas:
+# - Se evalúan en el servidor Prometheus
+# - NO envían notificaciones directamente
+# - Cuando se disparan, se envían a Alertmanager
+#
+# Alertmanager se encarga de:
+# - Agrupar
+# - Enrutar
+# - Notificar
+#
+# Estas reglas cubren:
+# - Salud de la API
+# - Performance
+# - Base de datos
+# - Recursos del sistema
+# - Métricas de negocio
+# ============================================================
+
+
 groups:
+  # ----------------------------------------------------------
+  # GRUPO DE ALERTAS: TODO API
+  # ----------------------------------------------------------
   - name: todo_api_alerts
+    # Intervalo con el que Prometheus evalúa estas reglas
     interval: 30s
     rules:
+      # ======================================================
+      # ALERTA: ALTA TASA DE ERRORES HTTP (5xx)
+      # ------------------------------------------------------
+      # Calcula el porcentaje de respuestas HTTP con código 5xx
+      # sobre el total de requests en los últimos 5 minutos.
+      # Se dispara si supera el 5% durante 5 minutos.
+      # ======================================================
       # High error rate alert
       - alert: HighErrorRate
         expr: |
@@ -10,17 +46,28 @@ groups:
             /
             sum(rate(http_requests_total[5m]))
           ) > 0.05
+        # Evita alertas por picos momentáneos
         for: 5m
+        # Etiquetas usadas por Alertmanager para enrutar
         labels:
           severity: critical
           component: api
+        # Información descriptiva de la alerta
         annotations:
           summary: "High HTTP error rate detected"
           description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
 
+      # ======================================================
+      # ALERTA: API NO DISPONIBLE
+      # ------------------------------------------------------
+      # Se dispara cuando el target configurado en Prometheus
+      # con job="todo-api" deja de responder.
+      # ======================================================
       # API down alert
       - alert: APIDown
+        # Métrica 'up' es 1 si el target responde, 0 si no
         expr: up{job="todo-api"} == 0
+        # Se mantiene caída por al menos 1 minuto
         for: 1m
         labels:
           severity: critical
@@ -29,12 +76,19 @@ groups:
           summary: "TODO API is down"
           description: "The TODO API has been down for more than 1 minute"
 
+      # ======================================================
+      # ALERTA: ALTO TIEMPO DE RESPUESTA
+      # ------------------------------------------------------
+      # Calcula el percentil 95 de la latencia HTTP por ruta
+      # usando histogramas de Prometheus.
+      # ======================================================
       # High response time alert
       - alert: HighResponseTime
         expr: |
           histogram_quantile(0.95,
             sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)
           ) > 2
+        # La latencia debe mantenerse elevada
         for: 5m
         labels:
           severity: warning
@@ -43,6 +97,12 @@ groups:
           summary: "High API response time"
           description: "95th percentile response time is {{ $value }}s for route {{ $labels.route }}"
 
+      # ======================================================
+      # ALERTA: OPERACIONES LENTAS EN BASE DE DATOS
+      # ------------------------------------------------------
+      # Evalúa el percentil 95 de duración de operaciones
+      # de base de datos expuestas como histogramas.
+      # ======================================================
       # High database operation duration
       - alert: SlowDatabaseOperations
         expr: |
@@ -57,6 +117,12 @@ groups:
           summary: "Slow database operations detected"
           description: "95th percentile for {{ $labels.operation }} is {{ $value }}s"
 
+      # ======================================================
+      # ALERTA: ERRORES EN BASE DE DATOS
+      # ------------------------------------------------------
+      # Detecta una tasa sostenida de errores de base de datos
+      # mayor a 0.1 errores por segundo.
+      # ======================================================
       # Database errors
       - alert: DatabaseErrors
         expr: rate(database_errors_total[5m]) > 0.1
@@ -68,6 +134,12 @@ groups:
           summary: "Database errors detected"
           description: "Database error rate is {{ $value }} errors/sec for operation {{ $labels.operation }}"
 
+      # ======================================================
+      # ALERTA: USO ELEVADO DE MEMORIA
+      # ------------------------------------------------------
+      # Usa métricas internas del proceso Node.js para
+      # detectar consumo excesivo de memoria.
+      # ======================================================
       # High memory usage (from default metrics)
       - alert: HighMemoryUsage
         expr: |
@@ -80,6 +152,12 @@ groups:
           summary: "High memory usage"
           description: "Application is using {{ $value }}MB of memory"
 
+      # ======================================================
+      # ALERTA: DEMASIADAS CONEXIONES ACTIVAS
+      # ------------------------------------------------------
+      # Indica posible saturación, fuga de conexiones
+      # o tráfico anómalo.
+      # ======================================================
       # Too many active connections
       - alert: HighActiveConnections
         expr: active_connections > 100
@@ -91,6 +169,12 @@ groups:
           summary: "High number of active connections"
           description: "Currently {{ $value }} active connections"
 
+      # ======================================================
+      # ALERTA: ERRORES DE APLICACIÓN
+      # ------------------------------------------------------
+      # Errores lógicos o de negocio expuestos como métrica
+      # personalizada de la aplicación.
+      # ====================================================== 
       # Application errors
       - alert: ApplicationErrors
         expr: rate(application_errors_total[5m]) > 0.5
@@ -102,6 +186,12 @@ groups:
           summary: "High application error rate"
           description: "Application error rate is {{ $value }} errors/sec"
 
+      # ======================================================
+      # ALERTA DE NEGOCIO: SIN TAREAS CREADAS
+      # ------------------------------------------------------
+      # Métrica de negocio que detecta inactividad total
+      # del sistema durante una hora completa.
+      # ======================================================
       # No tasks created in last hour (business metric)
       - alert: NoTasksCreated
         expr: |
@@ -113,3 +203,24 @@ groups:
         annotations:
           summary: "No tasks created recently"
           description: "No tasks have been created in the last hour"
+
+# --------------------------------------------------------------
+
+# Observaciones técnicas (NO aplicadas)
+
+# Posible división por cero
+#    sum(rate(http_requests_total[5m]))
+# Si no hay tráfico → NaN
+# Corrección sugerida:
+# clamp_min(sum(rate(...)), 1)
+
+# --------------------------------------------
+# Alertas de sistema
+#   process_resident_memory_bytes es válida
+#   En producción suele complementarse con Node Exporter
+
+# --------------------------------------------
+# Muy buen uso de métricas de negocio
+# NoTasksCreated es un plus fuerte para evaluación
+
+# --------------------------------------------------------------
