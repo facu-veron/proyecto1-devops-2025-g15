@@ -1,84 +1,152 @@
+# ============================================================
+# PIPELINE CI/CD - PROYECTO 1 GRUPO 15
+# ------------------------------------------------------------
+# Este workflow define el pipeline completo de Integración
+# Continua (CI) y Despliegue Continuo (CD) utilizando
+# GitHub Actions.
+#
+# CI (Integración Continua):
+# - Descarga el código
+# - Instala dependencias
+# - Ejecuta linting
+# - Ejecuta tests
+# - Genera un SBOM
+# - Realiza auditoría de seguridad
+#
+# CD (Despliegue Continuo):
+# - Construye la imagen Docker
+# - Publica la imagen en Amazon ECR
+# - Despliega infraestructura y aplicación con Terraform
+#
+# El workflow se ejecuta manualmente mediante workflow_dispatch.
+# ============================================================
+
 name: CI/CD - Proyecto 1 Grupo 15
 
-permissions:
+# ------------------------------------------------------------
+# Permisos del workflow
+# contents: read   -> permite leer el contenido del repositorio
+# packages: write  -> permite publicar artefactos (ej. imágenes)
+# ------------------------------------------------------------
+
+  permissions:
   contents: read
   packages: write
 
+# ------------------------------------------------------------
+# Evento disparador del pipeline
+# workflow_dispatch permite ejecutar el pipeline manualmente
+# desde la interfaz web de GitHub Actions.
+# ------------------------------------------------------------
+
 on:
   workflow_dispatch:
- 
+
+# ============================================================
+# JOB: CI - Integración Continua
+# ============================================================
 jobs:
   ci:
     name: Integración Continua
+    # Runner administrado por GitHub basado en Ubuntu
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------------------
-      # CHECKOUT DEL REPO
-      # ---------------------------
+      # --------------------------------------------------------
+      # CHECKOUT DEL REPOSITORIO
+      # Descarga el código fuente del repositorio en el runner
+      # para que los pasos posteriores puedan acceder a él.
+      # --------------------------------------------------------
       - name: Checkout Código
         uses: actions/checkout@v4
 
-      # ---------------------------
-      # INSTALAR NODE 20
-      # ---------------------------
+      # --------------------------------------------------------
+      # INSTALAR Y CONFIGURAR NODE.JS
+      # Instala y configura Node.js versión 20, asegurando
+      # consistencia entre entornos de desarrollo y CI.
+      # --------------------------------------------------------
       - name: Configurar Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ---------------------------
-      # INSTALAR DEPENDENCIAS
-      # ---------------------------
+      # --------------------------------------------------------
+      # INSTALACIÓN DE DEPENDENCIAS
+      # Descarga todas las dependencias definidas en package.json
+      # necesarias para ejecutar la aplicación y los tests.
+      # --------------------------------------------------------
       - name: Instalar dependencias
         run: npm install
 
-      # ---------------------------
-      # LINTER - ESLINT
-      # ---------------------------
+      # --------------------------------------------------------
+      # LINTING CON ESLINT
+      # Analiza el código en busca de errores de estilo y
+      # problemas potenciales.
+      # El "|| true" evita que el pipeline falle por errores
+      # de linting, permitiendo continuar el análisis.
+      # --------------------------------------------------------
       - name: Ejecutar ESLint
         run: |
           npx eslint . || true
 
-      # ---------------------------
-      # TESTS
-      # ---------------------------
+      # --------------------------------------------------------
+      # EJECUCIÓN DE TESTS
+      # Ejecuta los tests automatizados definidos en el proyecto
+      # para validar el correcto funcionamiento del código.
+      # --------------------------------------------------------
       - name: Ejecutar Tests
         run: npm test
 
-      # ---------------------------
-      # SBOM (CycloneDX)
-      # ---------------------------
+      # --------------------------------------------------------
+      # GENERACIÓN DE SBOM (CycloneDX)
+      # Crea un Software Bill of Materials con todas las
+      # dependencias del proyecto, útil para auditoría y
+      # análisis de seguridad.
+      # --------------------------------------------------------
       - name: Generar SBOM (CycloneDX)
         run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json
-
+      # --------------------------------------------------------
+      # SUBIR SBOM COMO ARTEFACTO
+      # Guarda el SBOM generado como artefacto del workflow
+      # para su descarga o análisis posterior.
+      # --------------------------------------------------------
       - name: Subir SBOM como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
 
-      # ---------------------------
-      # ANALISIS DE SEGURIDAD (SNYK O NPM AUDIT)
-      # ---------------------------
+      # --------------------------------------------------------
+      # ANÁLISIS DE SEGURIDAD DE DEPENDENCIAS
+      # Ejecuta npm audit para detectar vulnerabilidades
+      # conocidas. El "|| true" evita detener el pipeline.
+      # --------------------------------------------------------
       - name: Security Audit
         run: npm audit --audit-level=high || true
 
   # -------------------------------------------------------------------
-  # CD – Build y Deploy en AWS (ECR + ECS/Fargate via Terraform)
+  # JOB: CD - Despliegue Continuo – Build y Deploy en AWS (ECR + ECS/Fargate via Terraform)
   # -------------------------------------------------------------------
   cd:
     name: Despliegue
+    # Este job solo se ejecuta si el job "ci" finaliza correctamente
     needs: ci
     runs-on: ubuntu-latest
 
     steps:
+      # --------------------------------------------------------
+      # CHECKOUT DEL CÓDIGO
+      # Se vuelve a descargar el repositorio porque cada job
+      # corre en un runner independiente.
+      # --------------------------------------------------------
       - name: Checkout Código
         uses: actions/checkout@v4
 
-      # ---------------------------
+      # --------------------------------------------------------
       # CONFIGURAR CREDENCIALES AWS
-      # ---------------------------
+      # Permite al workflow autenticarse contra AWS para
+      # interactuar con ECR y otros servicios.
+      # -------------------------------------------------------- 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -86,18 +154,22 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # ---------------------------
-      # VARIABLES DE IMAGEN / ECR
-      # ---------------------------
+      # --------------------------------------------------------
+      # DEFINICIÓN DE VARIABLES DE IMAGEN
+      # Define el nombre del repositorio ECR y el tag de la imagen.
+      # Se almacenan como outputs para reutilizar en pasos siguientes.
+      # --------------------------------------------------------
       - name: Set image variables
         id: vars
         run: |
           echo "REPOSITORY=proyecto1-todo-api" >> $GITHUB_OUTPUT
           echo "IMAGE_TAG=latest" >> $GITHUB_OUTPUT
 
-      # ---------------------------
-      # LOGIN A ECR
-      # ---------------------------
+      # --------------------------------------------------------
+      # LOGIN EN AMAZON ECR
+      # Autentica Docker contra el registry de ECR para poder
+      # subir imágenes.
+      # --------------------------------------------------------
       - name: Log in to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
@@ -105,25 +177,31 @@ jobs:
               --username AWS \
               --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-      # ---------------------------
-      # CREAR REPO ECR SI NO EXISTE
-      # ---------------------------
+      # --------------------------------------------------------
+      # CREAR REPOSITORIO ECR SI NO EXISTE
+      # Verifica si el repositorio existe; si no, lo crea.
+      # Esto evita errores en el push de la imagen.
+      # --------------------------------------------------------
       - name: Create ECR repo if not exists
         run: |
           aws ecr describe-repositories \
             --repository-names ${{ steps.vars.outputs.REPOSITORY }} \
             || aws ecr create-repository --repository-name ${{ steps.vars.outputs.REPOSITORY }}
 
-      # ---------------------------
-      # BUILD IMAGEN DOCKER
-      # ---------------------------
+      # --------------------------------------------------------
+      # BUILD DE IMAGEN DOCKER
+      # Construye la imagen Docker de la aplicación utilizando
+      # el Dockerfile del proyecto.
+      # --------------------------------------------------------
       - name: Build Docker Image
         run: |
           docker build -t ${{ steps.vars.outputs.REPOSITORY }}:latest .
 
-      # ---------------------------
-      # TAG + PUSH A ECR
-      # ---------------------------
+      # --------------------------------------------------------
+      # TAG Y PUSH A ECR
+      # Etiqueta la imagen con la URI del repositorio ECR
+      # y la publica para su posterior despliegue.
+      # --------------------------------------------------------
       - name: Tag and Push Image to ECR
         run: |
           ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.vars.outputs.REPOSITORY }}
@@ -131,22 +209,30 @@ jobs:
           docker push $ECR_URI:${{ steps.vars.outputs.IMAGE_TAG }}
           echo "IMAGE_URI=$ECR_URI:${{ steps.vars.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
 
-      # ---------------------------
-      # INSTALAR TERRAFORM
-      # ---------------------------
+      # --------------------------------------------------------
+      # INSTALACIÓN DE TERRAFORM
+      # Instala la versión específica de Terraform necesaria
+      # para garantizar consistencia en el despliegue.
+      # --------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
 
-      # ---------------------------
+      # --------------------------------------------------------
       # DEPLOY CON TERRAFORM EN AWS
-      # ---------------------------
+      # TERRAFORM INIT
+      # Inicializa el backend, providers y módulos.
+      # --------------------------------------------------------
       - name: Terraform Init
         env:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
         run: terraform -chdir=terraform init
-
+      # --------------------------------------------------------
+      # TERRAFORM APPLY
+      # Aplica la infraestructura definida en Terraform,
+      # desplegando la aplicación con la imagen Docker generada.
+      # --------------------------------------------------------
       - name: Terraform Apply
         env:
           TF_VAR_image: ${{ env.IMAGE_URI }}

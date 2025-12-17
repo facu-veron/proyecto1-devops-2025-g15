@@ -101,15 +101,15 @@ Construir un pipeline que:
 ## 🛠️ Tecnologías Utilizadas
 
 
-| Área           | Herramienta                          |
-|----------------|--------------------------------------|
-| CI/CD          | GitHub Actions                       |
-| Contenedores    | Docker                               |
-| IaC            | Terraform                            |
+| Área           | Herramienta                           |
+|----------------|---------------------------------------|
+| CI/CD          | GitHub Actions                        |
+| Contenedores   | Docker                                |
+| IaC            | Terraform                             |
 | Seguridad      | Hadolint, npm audit, Trivy, SonarQube |
-| SBOM           | CycloneDX                           |
-| Monitoreo      | Prometheus + Grafana                |
-| Lenguaje       | Node.js                              |
+| SBOM           | CycloneDX                             |
+| Monitoreo      | Prometheus + Grafana                  |
+| Lenguaje       | Node.js                               |
 
 
 ---
@@ -162,10 +162,11 @@ npm run sbom                  # Generar SBOM
 | Documento | Descripción |
 |-----------|-------------|
 | [SECURITY-GUIDE.md](SECURITY-GUIDE.md) | 📖 Guía completa y didáctica (6000+ palabras) |
-| [SECURITY-POLICY.md](SECURITY-POLICY.md) | 📋 Política de seguridad formal |
-| [README-SECURITY.md](README-SECURITY.md) | ⚡ Guía rápida de inicio |
-| [REPORT-EXAMPLES.md](REPORT-EXAMPLES.md) | 📊 Ejemplos visuales de reportes |
-| [IMPLEMENTATION-SUMMARY.md](IMPLEMENTATION-SUMMARY.md) | ✅ Resumen de implementación |
+| [SECURITY-POLICY.md](SECURITY-POLICY.md) | 📋 Política de seguridad formal             |
+| [README-SECURITY.md](README-SECURITY.md) | ⚡ Guía rápida de inicio                    |
+| [REPORT-EXAMPLES.md](REPORT-EXAMPLES.md) | 📊 Ejemplos visuales de reportes            |
+| [IMPLEMENTATION-SUMMARY.md](IMPLEMENTATION-SUMMARY.md) | ✅ Resumen de implementación  |
+
 
 ### Criterios de Aprobación
 
@@ -178,6 +179,17 @@ npm run sbom                  # Generar SBOM
 - 🔴 0 CRITICAL
 - 🟠 0 HIGH
 - 🟡 Max 10 MEDIUM
+
+
+### Servicios Disponibles
+
+SonarQube: http://localhost:9000
+ (admin/admin)
+Prometheus: http://localhost:9090
+Grafana: http://localhost:3001
+(admin/admin)
+Alertmanager: http://localhost:9093
+
 
 ### Servicios de Seguridad
 
