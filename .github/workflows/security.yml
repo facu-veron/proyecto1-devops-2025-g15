@@ -1,26 +1,73 @@
+# ============================================================
+# SECURITY PIPELINE
+# ------------------------------------------------------------
+# Este workflow implementa un pipeline de seguridad automatizado
+# que analiza el proyecto en múltiples capas:
+#
+# - Validación de Dockerfile (Hadolint)
+# - Escaneo de dependencias Node.js (npm audit)
+# - Análisis de vulnerabilidades en imágenes Docker (Trivy)
+# - Generación de SBOM
+# - Publicación de resultados en GitHub Security
+# - Análisis de calidad y seguridad del código con SonarQube
+#
+# El pipeline se ejecuta:
+# - En cada push a main y develop
+# - En pull requests hacia main
+# - De forma programada diariamente (cron)
+# ============================================================
+
 name: Security Pipeline
 
+# ------------------------------------------------------------
+# Eventos que disparan el pipeline
+# ------------------------------------------------------------
+
 on:
+  # Ejecución automática al hacer push a main y develop
   push:
     branches: [ main, develop ]
-  pull_request:
+  # Ejecución al abrir o actualizar un Pull Request hacia main
+    pull_request:
     branches: [ main ]
-  schedule:
+  # Ejecución programada diaria (02:00 AM UTC)
+    schedule:
     - cron: '0 2 * * *'
 
+# ============================================================
+# JOB: Security Scanning
+# ============================================================
 jobs:
   security-scan:
     name: Security Scanning
+    # Runner administrado por GitHub
     runs-on: ubuntu-latest
+    # --------------------------------------------------------
+    # Permisos específicos del job
+    # contents: read          -> leer el código del repositorio
+    # security-events: write  -> publicar resultados en Security
+    # actions: read           -> acceder a metadata del workflow
+    # --------------------------------------------------------
     permissions:
       contents: read
       security-events: write
       actions: read
-    
+
     steps:
+      # --------------------------------------------------------
+      # CHECKOUT DEL CÓDIGO
+      # Descarga el código fuente para su análisis.
+      # --------------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # --------------------------------------------------------
+      # VALIDACIÓN DE DOCKERFILE CON HADOLINT
+      # Analiza buenas prácticas, seguridad y optimización
+      # del Dockerfile.
+      # El threshold "warning" permite fallar solo ante
+      # problemas más severos.
+      # --------------------------------------------------------
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -28,30 +75,59 @@ jobs:
           config: .hadolint.yaml
           failure-threshold: warning
 
+      # --------------------------------------------------------
+      # CONFIGURACIÓN DE NODE.JS
+      # Se instala Node.js v18 y se habilita cache de npm
+      # para acelerar futuras ejecuciones del pipeline.
+      # --------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
 
+      # --------------------------------------------------------
+      # INSTALACIÓN DE DEPENDENCIAS
+      # npm ci garantiza una instalación reproducible
+      # basada en package-lock.json.
+      # --------------------------------------------------------
       - name: Install dependencies
         run: npm ci
 
+        # --------------------------------------------------------
+      # ESCANEO DE DEPENDENCIAS (npm audit)
+      # - Se genera un reporte JSON para análisis posterior
+      # - Se ejecuta un audit con nivel moderate
+      # - continue-on-error evita detener el pipeline
+      # --------------------------------------------------------
       - name: Run npm audit
         run: |
           npm audit --json > npm-audit-report.json || true
           npm audit --audit-level=moderate
         continue-on-error: true
 
+      # --------------------------------------------------------
+      # SUBIDA DE REPORTE npm audit
+      # Permite descargar el informe detallado como artefacto.
+      # --------------------------------------------------------
       - name: Upload npm audit report
         uses: actions/upload-artifact@v4
         with:
           name: npm-audit-report
           path: npm-audit-report.json
 
+      # --------------------------------------------------------
+      # CONFIGURACIÓN DE DOCKER BUILDX
+      # Permite builds avanzados y cacheados de Docker.
+      # --------------------------------------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # --------------------------------------------------------
+      # BUILD DE IMAGEN DOCKER
+      # Construye la imagen localmente sin publicarla.
+      # Se utiliza el commit SHA como tag para trazabilidad.
+      # --------------------------------------------------------
       - name: Build Docker image
         uses: docker/build-push-action@v4
         with:
@@ -62,6 +138,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # --------------------------------------------------------
+      # ESCANEO DE IMAGEN CON TRIVY (SARIF)
+      # Analiza vulnerabilidades CRITICAL y HIGH.
+      # El resultado se genera en formato SARIF para
+      # integración con GitHub Security.
+      # --------------------------------------------------------
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -70,11 +152,21 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
+      # --------------------------------------------------------
+      # PUBLICACIÓN DE RESULTADOS EN GITHUB SECURITY
+      # Permite visualizar las vulnerabilidades directamente
+      # en la pestaña "Security" del repositorio.
+      # --------------------------------------------------------
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 
+      # --------------------------------------------------------
+      # ESCANEO COMPLETO CON TRIVY (JSON)
+      # Genera un reporte detallado para auditoría manual
+      # o análisis externo.
+      # --------------------------------------------------------
       - name: Run Trivy for full report
         uses: aquasecurity/trivy-action@master
         with:
@@ -82,12 +174,20 @@ jobs:
           format: 'json'
           output: 'trivy-report.json'
 
+      # --------------------------------------------------------
+      # SUBIDA DEL REPORTE COMPLETO DE TRIVY
+      # --------------------------------------------------------
       - name: Upload Trivy full report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.json
 
+      # --------------------------------------------------------
+      # BLOQUEO POR VULNERABILIDADES CRÍTICAS
+      # Si se detectan vulnerabilidades CRITICAL,
+      # Trivy devuelve exit-code 1 y el job falla.
+      # --------------------------------------------------------
       - name: Check for CRITICAL vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
@@ -96,15 +196,29 @@ jobs:
           severity: 'CRITICAL'
           format: 'table'
 
+      # --------------------------------------------------------
+      # GENERACIÓN DE SBOM
+      # Ejecuta el script definido en package.json
+      # para generar el Software Bill of Materials.
+      # --------------------------------------------------------
       - name: Generate SBOM
         run: npm run sbom
 
+      # --------------------------------------------------------
+      # SUBIDA DEL SBOM COMO ARTEFACTO
+      # --------------------------------------------------------
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
 
+      # --------------------------------------------------------
+      # RESUMEN DE SEGURIDAD
+      # Publica un resumen legible en la pestaña del workflow
+      # utilizando GITHUB_STEP_SUMMARY.
+      # Se ejecuta siempre, incluso si hubo errores.
+      # --------------------------------------------------------
       - name: Security Summary
         if: always()
         run: |
@@ -122,30 +236,86 @@ jobs:
           echo "### SBOM Generated" >> $GITHUB_STEP_SUMMARY
           echo "📋 Software Bill of Materials available in artifacts" >> $GITHUB_STEP_SUMMARY
 
+  # ============================================================
+  # JOB: SonarQube / SonarCloud Analysis
+  # ============================================================
   sonarqube:
     name: SonarQube Analysis
+    # Runner de GitHub
     runs-on: ubuntu-latest
+    # Este job solo se ejecuta en eventos push
     if: github.event_name == 'push'
     
     steps:
+      # --------------------------------------------------------
+      # CHECKOUT COMPLETO DEL REPOSITORIO
+      # fetch-depth: 0 permite a Sonar analizar el historial
+      # completo de commits y branches.
+      # --------------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
+      # --------------------------------------------------------
+      # CONFIGURACIÓN DE NODE.JS
+      # --------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
+      # --------------------------------------------------------
+      # INSTALACIÓN DE DEPENDENCIAS
+      # --------------------------------------------------------
       - name: Install dependencies
         run: npm ci
 
+      # --------------------------------------------------------
+      # EJECUCIÓN DE TESTS CON COVERAGE
+      # Permite a SonarQube analizar cobertura de código.
+      # --------------------------------------------------------
       - name: Run tests with coverage
         run: npm test -- --coverage
 
+      # --------------------------------------------------------
+      # ANÁLISIS CON SONARQUBE / SONARCLOUD
+      # Publica métricas de calidad, seguridad y cobertura.
+      # --------------------------------------------------------
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+# --------------------------------------------------------------
+# Observaciones y mejoras sugeridas (NO aplicadas)
+
+# Uso de @master en Trivy
+# Líneas: pasos aquasecurity/trivy-action@master
+# Riesgo: cambios inesperados
+
+# Recomendación:
+# aquasecurity/trivy-action@v0.x.x
+
+# --------------------------------------------
+# Node.js versión distinta al CI
+
+# Aquí: Node 18
+# En ci-cd.yml: Node 20
+# Riesgo: inconsistencias
+
+# Recomendación: unificar versiones
+
+# --------------------------------------------
+# Duplicación de escaneos Trivy
+
+# Se ejecuta Trivy:
+# SARIF
+# JSON
+# CRITICAL blocking
+# Es correcto académicamente, pero costoso en tiempo
+# SonarQube solo en push
+# Pull Requests no analizados
+# Se podría extender a pull_request para mayor cobertura
+# --------------------------------------------------------------
