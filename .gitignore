@@ -1,4 +1,47 @@
+# ------------------------------------------------------------------------------
+# ARCHIVO: .gitignore
+#
+# PROPÓSITO
+# ----------
+# Este archivo indica a Git qué archivos y directorios deben ser IGNORADOS
+# y no versionados dentro del repositorio.
+#
+# Su objetivo principal es evitar que se suban al repositorio:
+# - Dependencias instaladas localmente
+# - Datos generados en tiempo de ejecución
+# - Información sensible o secreta
+# - Artefactos generados automáticamente
+#
+# Esto mantiene el repositorio:
+# - Limpio y legible
+# - Seguro (sin secretos)
+# - Reproducible en distintos entornos
+#
+# IMPORTANTE
+# ----------
+# - Los archivos ignorados aquí pueden existir localmente, pero Git no los
+#   seguirá ni los incluirá en commits.
+# - Si un archivo ya fue versionado antes de estar en .gitignore, debe
+#   eliminarse del índice con `git rm --cached`.
+# ------------------------------------------------------------------------------
+
 node_modules/
+# ------------------------------------------------------------------------------
+# DATOS DE EJECUCIÓN / BASES DE DATOS LOCALES
+# ------------------------------------------------------------------------------
+# Directorio utilizado para almacenar datos generados en runtime,
+# como bases de datos SQLite u otros archivos persistentes locales.
+# Estos datos son específicos del entorno y NO deben compartirse.
 data/
+# ------------------------------------------------------------------------------
+# VARIABLES DE ENTORNO Y SECRETOS
+# ------------------------------------------------------------------------------
+# Archivo que suele contener credenciales, tokens y configuraciones sensibles.
+# Nunca debe versionarse para evitar filtraciones de seguridad.
 .env
+# ------------------------------------------------------------------------------
+# ARTEFACTOS GENERADOS AUTOMÁTICAMENTE
+# ------------------------------------------------------------------------------
+# SBOM (Software Bill of Materials) generado por herramientas de seguridad.
+# Se genera en el pipeline CI/CD y no debe versionarse manualmente.
 sbom.json
