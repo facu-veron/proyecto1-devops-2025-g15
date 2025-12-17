@@ -1,28 +1,81 @@
+# ============================================================
+# ALERTMANAGER CONFIGURATION
+# ------------------------------------------------------------
+# Este archivo define cómo Alertmanager recibe, agrupa,
+# enruta y notifica las alertas generadas por Prometheus.
+#
+# Alertmanager NO genera alertas:
+# - Recibe alertas desde Prometheus
+# - Aplica reglas de agrupamiento
+# - Evita alertas duplicadas o ruidosas
+# - Decide a qué canal enviar cada alerta
+#
+# Forma parte del pipeline de observabilidad y respuesta
+# a incidentes (Monitoring & Alerting).
+# ============================================================
+
+# ------------------------------------------------------------
+# CONFIGURACIÓN GLOBAL
+# ------------------------------------------------------------
 global:
+  # Tiempo máximo que Alertmanager espera antes de considerar
+  # una alerta como resuelta si Prometheus deja de enviarla.
   resolve_timeout: 5m
 
+# ------------------------------------------------------------
+# DEFINICIÓN DE RUTEO PRINCIPAL DE ALERTAS
+# ------------------------------------------------------------
+
 route:
+  # ----------------------------------------------------------
+  # Agrupamiento de alertas
+  # ----------------------------------------------------------
+  # Agrupa alertas que tengan el mismo nombre y severidad,
+  # reduciendo el ruido de notificaciones repetidas.
   group_by: ['alertname', 'severity']
+  # Tiempo de espera inicial antes de enviar la primera
+  # notificación de un grupo de alertas.
   group_wait: 10s
+  # Tiempo mínimo entre notificaciones del mismo grupo
+  # cuando se agregan nuevas alertas.
   group_interval: 10s
+  # Intervalo para reenviar una alerta activa que no
+  # ha sido resuelta (recordatorio).
   repeat_interval: 12h
+  # Receiver por defecto si ninguna regla específica coincide.
   receiver: 'default'
+
+  # ----------------------------------------------------------
+  # SUB-RUTAS DE ALERTAS SEGÚN SEVERIDAD
+  # ----------------------------------------------------------
   routes:
+      # Las alertas críticas se envían al receiver "critical"
+      # y continúan evaluándose para otras rutas si aplica.
     - match:
         severity: critical
       receiver: 'critical'
       continue: true
-    
+
+      # Alertas de advertencia (warning).    
     - match:
         severity: warning
       receiver: 'warning'
       continue: true
-    
+
+      # Alertas informativas.    
     - match:
         severity: info
       receiver: 'info'
 
+# ------------------------------------------------------------
+# DEFINICIÓN DE RECEIVERS (DESTINOS DE ALERTAS)
+# ------------------------------------------------------------
 receivers:
+  # ----------------------------------------------------------
+  # Receiver por defecto
+  # ----------------------------------------------------------
+        # Envía alertas activas y también notificaciones
+        # cuando la alerta se resuelve.
   - name: 'default'
     webhook_configs:
       - url: 'http://localhost:5001/webhook'
@@ -32,6 +85,10 @@ receivers:
     webhook_configs:
       - url: 'http://localhost:5001/webhook/critical'
         send_resolved: true
+
+    # Ejemplo de integración con Slack (comentado):
+    # Permite escalar alertas críticas a canales de respuesta rápida
+
     # Puedes agregar configuración de email, Slack, etc:
     # slack_configs:
     #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
@@ -39,10 +96,15 @@ receivers:
     #     title: 'Critical Alert'
     #     text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}'
 
+  # ----------------------------------------------------------
+  # Receiver para alertas WARNING
+  # ----------------------------------------------------------
   - name: 'warning'
     webhook_configs:
       - url: 'http://localhost:5001/webhook/warning'
         send_resolved: true
+
+    # Ejemplo de notificación por email (comentado):
     # email_configs:
     #   - to: 'team@example.com'
     #     from: 'alertmanager@example.com'
@@ -50,20 +112,65 @@ receivers:
     #     auth_username: 'alertmanager@example.com'
     #     auth_password: 'password'
 
+  # ----------------------------------------------------------
+  # Receiver para alertas INFO
+  # ----------------------------------------------------------
   - name: 'info'
     webhook_configs:
       - url: 'http://localhost:5001/webhook/info'
         send_resolved: true
 
+# ------------------------------------------------------------
+# REGLAS DE INHIBICIÓN DE ALERTAS
+# ------------------------------------------------------------
+# Las reglas de inhibición permiten silenciar alertas
+# de menor severidad cuando una alerta más grave está activa.
+# Esto reduce el ruido durante incidentes importantes.
+# ------------------------------------------------------------
+
+    # Si existe una alerta crítica activa,
+    # se inhiben las alertas warning del mismo componente.
 inhibit_rules:
   - source_match:
       severity: 'critical'
     target_match:
       severity: 'warning'
     equal: ['alertname', 'component']
-  
+
+    # Si la API está caída, se inhiben todas las demás alertas
+    # relacionadas al mismo componente.
   - source_match:
       alertname: 'APIDown'
     target_match_re:
       alertname: '.*'
     equal: ['component']
+
+# --------------------------------------------------------------
+
+# Observaciones y mejoras sugeridas (NO aplicadas)
+
+# URLs localhost
+
+# En Docker/Kubernetes:
+# localhost refiere al contenedor de Alertmanager
+# Recomendación:
+# Usar nombre de servicio (alert-webhook:5001)
+
+# --------------------------------------------
+# Autenticación de Webhooks
+# Ideal:
+  # Token o header de autenticación
+  # HTTPS
+
+# --------------------------------------------
+# Receivers jerárquicos
+# Críticos:
+#   Webhook + Slack + Email
+# Warnings:
+#   Email / Dashboard only
+
+# --------------------------------------------
+# Silencios automáticos
+# Integrar silences por mantenimiento (future)
+
+# --------------------------------------------------------------
