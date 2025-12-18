@@ -94,21 +94,39 @@ Construir un pipeline que:
 
 <img width="374" height="124" alt="01-workflow" src="https://github.com/user-attachments/assets/8664e28b-2833-40a3-b0a0-7c84d53cba37" />
 
+El pipeline está definido y versionado en GitHub Actions.
+
+
+
 2️⃣ Ejecución exitosa del workflow
 
 <img width="530" height="171" alt="02-ejecucion-exitosa" src="https://github.com/user-attachments/assets/af6ae631-eb76-4e70-afd1-a900b8b9fe8b" />
 
+El pipeline se ejecuta de punta a punta sin errores.
+
+
+
 3️⃣ Job CI – pasos principales
 
 ![03-ci-steps](https://github.com/user-attachments/assets/75606a6b-530d-45d9-9900-213545862519)
+  
 
-4️⃣ Tests ejecutados  
+![eslint](https://github.com/user-attachments/assets/4e9a57a6-cc58-447f-a98c-6df667c45990)
+
 
 ![04-tests](https://github.com/user-attachments/assets/e1936b4a-f0f6-47dd-8e55-9da336e328fd)
 
-5️⃣ SBOM generado y guardado
+
 
 ![05-sbom-artifact](https://github.com/user-attachments/assets/0038eb05-6cdb-46aa-aeff-f3a7b5e8edbf)
+
+
+
+![audit](https://github.com/user-attachments/assets/d3ea1f5e-2c8d-4a72-a80b-4ac7d9d0c595)
+
+
+El pipeline realiza build, validaciones de código, tests y controles de seguridad.
+
 
 6️⃣ Job CD – Build de imagen Docker
 
