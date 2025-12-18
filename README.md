@@ -3,32 +3,6 @@
 
 Este proyecto implementa un flujo completo de integración y despliegue continuo (CI/CD) utilizando GitHub Actions, Docker, Terraform, **pipeline de seguridad automatizado**, y monitoreo con Prometheus + Grafana. La aplicación consiste en una API Node.js simple con métricas internas para observabilidad.
 
-## 🔐 Pipeline de Seguridad
-
-Este proyecto incluye un **pipeline completo de validación de seguridad** para contenedores Docker:
-
-### Herramientas Integradas
-- ✅ **Hadolint** - Validación de Dockerfile
-- ✅ **npm audit** - Escaneo de dependencias
-- ✅ **Trivy** - Escaneo de imágenes Docker
-- ✅ **SonarQube** - Análisis de calidad de código
-
-### Inicio Rápido - Seguridad
-
-```powershell
-# 1. Instalar herramientas
-./install-security-tools.ps1
-
-# 2. Ejecutar pipeline de seguridad
-./security-pipeline.ps1
-
-# 3. Interpretar resultados
-./interpret-security-reports.ps1
-```
-
-**📚 Documentación Completa**: Ver [SECURITY-GUIDE.md](SECURITY-GUIDE.md)
-
----
 
 ## 📁 Estructura del Proyecto
 ```
@@ -86,7 +60,8 @@ Proyecto1_Grupo15/
 ├── README.md
 └── LICENSE
 ```
-## 🚀 Objetivo
+
+## 🚀 Objetivo de Pipeline
 
 Construir un pipeline que:
 
@@ -110,6 +85,68 @@ Construir un pipeline que:
 | SBOM           | CycloneDX                             |
 | Monitoreo      | Prometheus + Grafana                  |
 | Lenguaje       | Node.js                               |
+
+
+### Documentación de pipeline CI/CD
+
+#
+1️⃣ Workflow visible en GitHub Actions
+
+<img width="374" height="124" alt="01-workflow" src="https://github.com/user-attachments/assets/8664e28b-2833-40a3-b0a0-7c84d53cba37" />
+
+2️⃣ Ejecución exitosa del workflow
+
+<img width="530" height="171" alt="02-ejecucion-exitosa" src="https://github.com/user-attachments/assets/af6ae631-eb76-4e70-afd1-a900b8b9fe8b" />
+
+3️⃣ Job CI – pasos principales
+
+![03-ci-steps](https://github.com/user-attachments/assets/75606a6b-530d-45d9-9900-213545862519)
+
+4️⃣ Tests ejecutados  
+
+![04-tests](https://github.com/user-attachments/assets/e1936b4a-f0f6-47dd-8e55-9da336e328fd)
+
+5️⃣ SBOM generado y guardado
+
+![05-sbom-artifact](https://github.com/user-attachments/assets/0038eb05-6cdb-46aa-aeff-f3a7b5e8edbf)
+
+6️⃣ Job CD – Build de imagen Docker
+
+7️⃣ Imagen publicada en Amazon ECR
+
+8️⃣ Terraform Init y Apply exitosos
+
+9️⃣ Aplicación corriendo en AWS
+
+Métricas expuestas (para conectar con observabilidad)
+
+## 🔐 Pipeline de Seguridad
+
+Este proyecto incluye un **pipeline completo de validación de seguridad** para contenedores Docker:
+
+### Herramientas Integradas
+- ✅ **Hadolint** - Validación de Dockerfile
+- ✅ **npm audit** - Escaneo de dependencias
+- ✅ **Trivy** - Escaneo de imágenes Docker
+- ✅ **SonarQube** - Análisis de calidad de código
+
+### Inicio Rápido - Seguridad
+
+```powershell
+# 1. Instalar herramientas
+./install-security-tools.ps1
+
+# 2. Ejecutar pipeline de seguridad
+./security-pipeline.ps1
+
+# 3. Interpretar resultados
+./interpret-security-reports.ps1
+```
+
+**📚 Documentación Completa**: Ver [SECURITY-GUIDE.md](SECURITY-GUIDE.md)
+
+---
+
 
 
 ---
