@@ -1,4 +1,4 @@
-Proyecto 1 – Grupo 15
+Proyecto 1 – Grupo 17
 ## CI/CD con GitHub Actions + Terraform + Docker + Security Pipeline
 
 Este proyecto implementa un flujo completo de integración y despliegue continuo (CI/CD) utilizando GitHub Actions, Docker, Terraform, **pipeline de seguridad automatizado**, y monitoreo con Prometheus + Grafana. La aplicación consiste en una API Node.js simple con métricas internas para observabilidad.
@@ -312,7 +312,7 @@ docker-compose up -d sonarqube
 
 ---
 
-GRUPO 15
+GRUPO 17
 Alumnos:
 Facundo Verón
 Alfredo Palacios
