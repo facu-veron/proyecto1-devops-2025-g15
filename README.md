@@ -89,7 +89,7 @@ Construir un pipeline que:
 
 ### Documentación de pipeline CI/CD
 
-#
+## 
 1️⃣ Workflow visible en GitHub Actions
 
 <img width="374" height="124" alt="01-workflow" src="https://github.com/user-attachments/assets/8664e28b-2833-40a3-b0a0-7c84d53cba37" />
@@ -97,7 +97,7 @@ Construir un pipeline que:
 El pipeline está definido y versionado en GitHub Actions.
 
 
-
+##
 2️⃣ Ejecución exitosa del workflow
 
 <img width="530" height="171" alt="02-ejecucion-exitosa" src="https://github.com/user-attachments/assets/af6ae631-eb76-4e70-afd1-a900b8b9fe8b" />
@@ -105,7 +105,7 @@ El pipeline está definido y versionado en GitHub Actions.
 El pipeline se ejecuta de punta a punta sin errores.
 
 
-
+##
 3️⃣ Job CI – pasos principales
 
 ![03-ci-steps](https://github.com/user-attachments/assets/75606a6b-530d-45d9-9900-213545862519)
@@ -117,7 +117,6 @@ El pipeline se ejecuta de punta a punta sin errores.
 ![04-tests](https://github.com/user-attachments/assets/e1936b4a-f0f6-47dd-8e55-9da336e328fd)
 
 
-
 ![05-sbom-artifact](https://github.com/user-attachments/assets/0038eb05-6cdb-46aa-aeff-f3a7b5e8edbf)
 
 
@@ -127,16 +126,56 @@ El pipeline se ejecuta de punta a punta sin errores.
 
 El pipeline realiza build, validaciones de código, tests y controles de seguridad.
 
+##
 
-6️⃣ Job CD – Build de imagen Docker
 
-7️⃣ Imagen publicada en Amazon ECR
+4️⃣ Job CD – Build de imagen Docker
 
-8️⃣ Terraform Init y Apply exitosos
+<img width="619" height="152" alt="Build docker image" src="https://github.com/user-attachments/assets/acb23303-840f-4267-b8ce-4e2d56c13c98" />
 
-9️⃣ Aplicación corriendo en AWS
+<img width="625" height="134" alt="Docket Image" src="https://github.com/user-attachments/assets/8b09a257-d747-4473-be89-3f54f34720a0" />
 
-Métricas expuestas (para conectar con observabilidad)
+La aplicación se empaqueta como imagen Docker reproducible.
+
+5️⃣ Imagen publicada en Amazon ECR
+
+
+# aca va la imagen de aws
+# AWS Console → ECR → Repositories
+
+
+
+
+6️⃣ Terraform Init y Apply exitosos
+
+<img width="714" height="313" alt="terraform init" src="https://github.com/user-attachments/assets/8eab5831-52e8-41f0-866a-f71118bd11bb" />
+
+<img width="508" height="83" alt="terraform init_ok" src="https://github.com/user-attachments/assets/60a3d713-4384-40f8-b888-38511767d79e" />
+
+<img width="668" height="187" alt="terraform_apply" src="https://github.com/user-attachments/assets/f68d6c93-7307-4f8e-888a-e09426911d07" />
+
+<img width="618" height="152" alt="terraform_apply_ok" src="https://github.com/user-attachments/assets/640f2667-78a9-4a85-860b-1ef9ed61b798" />
+
+
+La infraestructura se despliega automáticamente usando IaC.
+
+
+7️⃣ Aplicación corriendo en AWS
+
+<img width="631" height="132" alt="status_ok" src="https://github.com/user-attachments/assets/7de6ee99-9a94-4622-81e4-659f513235b3" />
+
+
+El pipeline no solo despliega infraestructura, sino una app funcional.
+
+
+
+8️⃣ Métricas expuestas (para conectar con observabilidad)
+
+# aca van las imagenes de las metricas
+
+
+###
+
 
 ## 🔐 Pipeline de Seguridad
 
