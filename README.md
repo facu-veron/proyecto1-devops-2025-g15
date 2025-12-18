@@ -1,4 +1,4 @@
-# Proyecto 1 – Grupo 15
+Proyecto 1 – Grupo 15
 ## CI/CD con GitHub Actions + Terraform + Docker + Security Pipeline
 
 Este proyecto implementa un flujo completo de integración y despliegue continuo (CI/CD) utilizando GitHub Actions, Docker, Terraform, **pipeline de seguridad automatizado**, y monitoreo con Prometheus + Grafana. La aplicación consiste en una API Node.js simple con métricas internas para observabilidad.
@@ -164,14 +164,22 @@ La infraestructura se despliega automáticamente usando IaC.
 
 <img width="631" height="132" alt="status_ok" src="https://github.com/user-attachments/assets/7de6ee99-9a94-4622-81e4-659f513235b3" />
 
-
 El pipeline no solo despliega infraestructura, sino una app funcional.
 
+<img width="1443" height="762" alt="imagen" src="https://github.com/user-attachments/assets/b342d17b-d812-4c97-8efd-25dab55e6f11" />
 
+![2 - prometheus](https://github.com/user-attachments/assets/f0ccacef-ec9d-4a9a-84dc-a786359db845)
 
 8️⃣ Métricas expuestas (para conectar con observabilidad)
 
-# aca van las imagenes de las metricas
+
+![3 - grafana](https://github.com/user-attachments/assets/ffca6c82-543b-4bb8-ab8c-338465b21437)
+
+![4 - métricas](https://github.com/user-attachments/assets/e8996a43-9cb7-4b46-9aa9-a6be51f0d8c7)
+
+![6 - grafana 1](https://github.com/user-attachments/assets/2e594375-2e0b-4907-8ec4-c1c2b310efd1)
+
+![7 - grafana 2](https://github.com/user-attachments/assets/0c5530ff-7ff7-4100-a20c-de4b292111a1)
 
 
 ###
@@ -180,6 +188,10 @@ El pipeline no solo despliega infraestructura, sino una app funcional.
 ## 🔐 Pipeline de Seguridad
 
 Este proyecto incluye un **pipeline completo de validación de seguridad** para contenedores Docker:
+
+![5 - alert manager](https://github.com/user-attachments/assets/33ca8968-7572-4692-a3eb-449e16509b2f)
+
+
 
 ### Herramientas Integradas
 - ✅ **Hadolint** - Validación de Dockerfile
@@ -300,5 +312,9 @@ docker-compose up -d sonarqube
 
 ---
 
+GRUPO 15
 Alumnos:
-
+Facundo Verón
+Alfredo Palacios
+Mariano Lorea
+Martín Pizzi
