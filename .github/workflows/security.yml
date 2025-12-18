@@ -127,8 +127,8 @@ jobs:
       # CONFIGURACIÓN DE DOCKER BUILDX
       # Permite builds avanzados y cacheados de Docker.
       # --------------------------------------------------------
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      #- name: Set up Docker Buildx
+      #  uses: docker/setup-buildx-action@v3
 
       # --------------------------------------------------------
       # BUILD DE IMAGEN DOCKER
