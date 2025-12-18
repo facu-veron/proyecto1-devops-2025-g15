@@ -140,7 +140,8 @@ La aplicación se empaqueta como imagen Docker reproducible.
 5️⃣ Imagen publicada en Amazon ECR
 
 
-# aca va la imagen de aws
+<img width="1443" height="762" alt="imagen" src="https://github.com/user-attachments/assets/b342d17b-d812-4c97-8efd-25dab55e6f11" />
+
 # AWS Console → ECR → Repositories
 
 
@@ -165,8 +166,6 @@ La infraestructura se despliega automáticamente usando IaC.
 <img width="631" height="132" alt="status_ok" src="https://github.com/user-attachments/assets/7de6ee99-9a94-4622-81e4-659f513235b3" />
 
 El pipeline no solo despliega infraestructura, sino una app funcional.
-
-<img width="1443" height="762" alt="imagen" src="https://github.com/user-attachments/assets/b342d17b-d812-4c97-8efd-25dab55e6f11" />
 
 ![2 - prometheus](https://github.com/user-attachments/assets/f0ccacef-ec9d-4a9a-84dc-a786359db845)
 
